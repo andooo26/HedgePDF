@@ -46,6 +46,8 @@ document.getElementById("export").addEventListener("click", async () => {
             padding: 20px;
             max-width: 800px;
             margin: 0 auto;
+            overflow-wrap: break-word;
+            word-wrap: break-word;
           }
           h1, h2, h3, h4, h5, h6 {
             margin-top: 1.5em;
@@ -86,9 +88,13 @@ document.getElementById("export").addEventListener("click", async () => {
             padding: 16px;
             border-radius: 6px;
             overflow-x: auto;
+            overflow-wrap: break-word;
+            word-wrap: break-word;
+            max-width: 100%;
             margin-bottom: 1em;
             border: 1px solid #e1e4e8;
             border-left: 4px solid #0366d6;
+            box-sizing: border-box;
           }
           pre code {
             background-color: transparent;
@@ -107,6 +113,10 @@ document.getElementById("export").addEventListener("click", async () => {
             color: #6a737d;
             margin-bottom: 1em;
             border-radius: 0 3px 3px 0;
+            max-width: 100%;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            box-sizing: border-box;
           }
           blockquote p {
             margin-bottom: 0.5em;
@@ -116,17 +126,21 @@ document.getElementById("export").addEventListener("click", async () => {
           }
           table {
             border-collapse: collapse;
-            width: 100%;
+            width: auto;
+            max-width: 100%;
             margin-bottom: 1em;
             border: 1px solid #dfe2e5;
             border-radius: 3px;
             overflow: hidden;
+            table-layout: auto;
           }
           th, td {
             font-size: 14px !important;
             border: 1px solid #dfe2e5;
             padding: 10px 13px;
             text-align: left;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
           }
           th {
             background-color: #f6f8fa;
@@ -203,6 +217,8 @@ document.getElementById("export").addEventListener("click", async () => {
     htmlElement.style.fontSize = '14px';
     bodyElement.style.fontSize = '14px';
     bodyElement.style.fontFamily = '"Noto Sans JP", "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif';
+    bodyElement.style.overflowWrap = 'break-word';
+    bodyElement.style.wordWrap = 'break-word';
     
     // テキスト要素にフォントサイズを適用
     const allElements = bodyElement.querySelectorAll('p, li, td, th, div, span, blockquote');
@@ -212,26 +228,133 @@ document.getElementById("export").addEventListener("click", async () => {
           el.style.fontSize = '14px';
         }
       }
+      // はみ出し防止のスタイルを適用
+      el.style.boxSizing = 'border-box';
+      if (!el.matches('table, th, td')) {
+        el.style.maxWidth = '100%';
+        el.style.overflowWrap = 'break-word';
+        el.style.wordWrap = 'break-word';
+      }
     });
     
     // 表のスタイルを適用
     const tables = bodyElement.querySelectorAll('table');
-    tables.forEach(table => {
-      table.style.borderCollapse = 'collapse';
-      table.style.width = '100%';
-      table.style.marginBottom = '1em';
-      table.style.border = '1px solid #dfe2e5';
-      table.style.borderRadius = '3px';
-      table.style.overflow = 'hidden';
+    const tableSizePromises = Array.from(tables).map(table => {
+      return new Promise((resolve) => {
+        table.style.borderCollapse = 'collapse';
+        table.style.maxWidth = '100%';
+        table.style.marginBottom = '1em';
+        table.style.border = '1px solid #dfe2e5';
+        table.style.borderRadius = '3px';
+        table.style.overflow = 'hidden';
+        table.style.tableLayout = 'auto';
+        table.style.boxSizing = 'border-box';
+        
+        // 親要素の幅を取得
+        const parentElement = table.parentElement;
+        const parentWidth = parentElement ? parentElement.clientWidth : 800;
+        
+        // セルの最小幅を計算
+        const cells = table.querySelectorAll('th, td');
+        cells.forEach(cell => {
+          cell.style.fontSize = '14px';
+          cell.style.border = '1px solid #dfe2e5';
+          cell.style.padding = '10px 13px';
+          cell.style.textAlign = 'left';
+          cell.style.boxSizing = 'border-box';
+          cell.style.whiteSpace = 'nowrap';
+        });
+          table.style.width = 'auto';
+        
+        // レイアウトを再計算させるためにrequestAnimationFrameを使用
+        const calculateTableSize = () => {
+          void table.offsetWidth;
+          const tableNaturalWidth = table.scrollWidth;
+          // 表の自然な幅が親要素を超える場合
+          if (tableNaturalWidth > parentWidth) {
+            table.style.width = '100%';
+            table.style.tableLayout = 'fixed';
+            const rows = table.querySelectorAll('tr');
+            if (rows.length > 0) {
+              const firstRow = rows[0];
+              const firstRowCells = firstRow.querySelectorAll('th, td');
+              const columnCount = firstRowCells.length;
+              const columnMinWidths = [];
+              
+              // 各列の最小幅を計算
+              for (let colIndex = 0; colIndex < columnCount; colIndex++) {
+                let maxMinWidth = 0;
+                rows.forEach(row => {
+                  const cell = row.querySelectorAll('th, td')[colIndex];
+                  if (cell) {
+                    // 最小幅を測定
+                    const originalWhiteSpace = cell.style.whiteSpace;
+                    cell.style.whiteSpace = 'nowrap';
+                    // レイアウトを再計算
+                    void cell.offsetWidth;
+                    const minWidth = cell.scrollWidth;
+                    cell.style.whiteSpace = originalWhiteSpace;
+                    maxMinWidth = Math.max(maxMinWidth, minWidth);
+                  }
+                });
+                columnMinWidths.push(maxMinWidth);
+              }
+              
+              // 合計最小幅を計算
+              const totalMinWidth = columnMinWidths.reduce((sum, width) => sum + width, 0);
+              
+              // 各列に幅を割り当て
+              if (totalMinWidth > 0) {
+                firstRowCells.forEach((cell, colIndex) => {
+                  const minWidth = columnMinWidths[colIndex];
+                  const percentage = (minWidth / totalMinWidth) * 100;
+                  cell.style.width = `${percentage}%`;
+                });
+              }
+            }
+          } else {
+            table.style.width = 'auto';
+            table.style.tableLayout = 'auto';
+          }
+          
+          // 折り返しスタイルを適用
+          cells.forEach(cell => {
+            cell.style.whiteSpace = 'normal';
+            cell.style.wordWrap = 'break-word';
+            cell.style.overflowWrap = 'break-word';
+          });
+          
+          resolve();
+        };
+        
+        // レイアウト計算を実行
+        requestAnimationFrame(() => {
+          requestAnimationFrame(calculateTableSize);
+        });
+      });
     });
+    
+    // すべての表のサイズ計算が完了するまで待機
+    await Promise.all(tableSizePromises);
     
     // 表のセルにスタイルを適用
     const tableCells = bodyElement.querySelectorAll('th, td');
     tableCells.forEach(cell => {
-      cell.style.fontSize = '14px';
-      cell.style.border = '1px solid #dfe2e5';
-      cell.style.padding = '10px 13px';
-      cell.style.textAlign = 'left';
+      if (!cell.style.fontSize) {
+        cell.style.fontSize = '14px';
+      }
+      if (!cell.style.border) {
+        cell.style.border = '1px solid #dfe2e5';
+      }
+      if (!cell.style.padding) {
+        cell.style.padding = '10px 13px';
+      }
+      if (!cell.style.textAlign) {
+        cell.style.textAlign = 'left';
+      }
+      if (!cell.style.boxSizing) {
+        cell.style.boxSizing = 'border-box';
+      }
     });
     
     // 表の見出し行にスタイルを適用
@@ -264,6 +387,10 @@ document.getElementById("export").addEventListener("click", async () => {
       blockquote.style.color = '#6a737d';
       blockquote.style.marginBottom = '1em';
       blockquote.style.borderRadius = '0 3px 3px 0';
+      blockquote.style.maxWidth = '100%';
+      blockquote.style.wordWrap = 'break-word';
+      blockquote.style.overflowWrap = 'break-word';
+      blockquote.style.boxSizing = 'border-box';
     });
     
     // コードブロックにスタイルを適用
@@ -273,9 +400,13 @@ document.getElementById("export").addEventListener("click", async () => {
       pre.style.padding = '16px';
       pre.style.borderRadius = '6px';
       pre.style.overflowX = 'auto';
+      pre.style.overflowWrap = 'break-word';
+      pre.style.wordWrap = 'break-word';
+      pre.style.maxWidth = '100%';
       pre.style.marginBottom = '1em';
       pre.style.border = '1px solid #e1e4e8';
       pre.style.borderLeft = '4px solid #0366d6';
+      pre.style.boxSizing = 'border-box';
     });
     
     // インラインコードにスタイルを適用
