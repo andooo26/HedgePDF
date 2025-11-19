@@ -34,13 +34,16 @@ document.getElementById("export").addEventListener("click", async () => {
             padding: 0;
             box-sizing: border-box;
           }
+          html {
+            font-size: 14px !important;
+          }
           body {
-            font-family: "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
-            font-size: 14px;
+            font-family: "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif !important;
+            font-size: 14px !important;
             line-height: 1.8;
             color: #333;
             background: #fff;
-            padding: 40px;
+            padding: 20px;
             max-width: 800px;
             margin: 0 auto;
           }
@@ -55,6 +58,7 @@ document.getElementById("export").addEventListener("click", async () => {
           h3 { font-size: 1.3em; }
           h4 { font-size: 1.1em; }
           p {
+            font-size: 14px !important;
             margin-bottom: 1em;
           }
           ul, ol {
@@ -62,7 +66,11 @@ document.getElementById("export").addEventListener("click", async () => {
             margin-bottom: 1em;
           }
           li {
+            font-size: 14px !important;
             margin-bottom: 0.5em;
+          }
+          div, span {
+            font-size: 14px !important;
           }
           code {
             font-family: "Courier New", "Monaco", "Consolas", monospace;
@@ -84,6 +92,7 @@ document.getElementById("export").addEventListener("click", async () => {
             padding: 0;
           }
           blockquote {
+            font-size: 14px !important;
             border-left: 4px solid #ddd;
             padding-left: 1em;
             margin-left: 0;
@@ -96,6 +105,7 @@ document.getElementById("export").addEventListener("click", async () => {
             margin-bottom: 1em;
           }
           th, td {
+            font-size: 14px !important;
             border: 1px solid #ddd;
             padding: 8px 12px;
             text-align: left;
@@ -148,12 +158,31 @@ document.getElementById("export").addEventListener("click", async () => {
 
     // フォントの読み込み
     await new Promise((resolve) => setTimeout(resolve, 1500));
-
+    
+    // JSでスタイルを適用
+    const doc = iframe.contentDocument;
+    const bodyElement = doc.body;
+    const htmlElement = doc.documentElement;
+    
+    htmlElement.style.fontSize = '15px';
+    bodyElement.style.fontSize = '15px';
+    bodyElement.style.fontFamily = '"Noto Sans JP", "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif';
+    
+    const allElements = bodyElement.querySelectorAll('p, li, td, th, div, span, blockquote');
+    allElements.forEach(el => {
+      // 見出し要素でない場合のみ適用
+      if (!el.matches('h1, h2, h3, h4, h5, h6') && !el.closest('h1, h2, h3, h4, h5, h6')) {
+        if (!el.style.fontSize) {
+          el.style.fontSize = '15px';
+        }
+      }
+    });
+    
     // html2pdf.jsでPDF化
-    const element = iframe.contentDocument.body;
+    const element = bodyElement;
     
     const opt = {
-      margin: [10, 10, 10, 10],
+      margin: [5, 5, 5, 5],
       filename: `${noteid || 'document'}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { 
