@@ -425,12 +425,13 @@ document.getElementById("export").addEventListener("click", async () => {
     // html2pdf.jsでPDF化
     const element = bodyElement;
     
+    const deviceScale = Math.min(window.devicePixelRatio || 1, 3);
     const opt = {
       margin: [5, 5, 5, 5],
       filename: `${noteid || 'document'}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { 
-        scale: 2,
+        scale: deviceScale * 2,
         useCORS: true,
         logging: false,
         backgroundColor: '#ffffff',
