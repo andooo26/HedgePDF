@@ -14,6 +14,14 @@ document.getElementById("export").addEventListener("click", async () => {
 
   if (!md) return;
 
+  const firstContentLine = md.split(/\r?\n/).find(line => line.trim().length > 0) || '';
+  const sanitizedTitle = firstContentLine
+    .replace(/^#+\s*/, '')
+    .trim()
+    .replace(/[\\/:*?"<>|]/g, '_')
+    .slice(0, 120);
+  const pdfFileName = sanitizedTitle || noteid || 'document';
+
   try {
     // MarkdownをHTMLに変換
     const htmlContent = marked.parse(md);
@@ -428,7 +436,7 @@ document.getElementById("export").addEventListener("click", async () => {
     const deviceScale = Math.min(window.devicePixelRatio || 1, 3);
     const opt = {
       margin: [5, 5, 5, 5],
-      filename: `${noteid || 'document'}.pdf`,
+      filename: `${pdfFileName}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { 
         scale: deviceScale * 2,
