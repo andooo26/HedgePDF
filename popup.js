@@ -500,7 +500,24 @@ exportButton.addEventListener("click", async () => {
       pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
     };
 
-    await html2pdf().set(opt).from(element).save();
+    const worker = html2pdf().set(opt).from(element).toPdf();
+
+    await worker.get('pdf').then(pdf => {
+      const totalPages = pdf.internal.getNumberOfPages();
+      for (let pageNumber = 1; pageNumber <= totalPages; pageNumber++) {
+        pdf.setPage(pageNumber);
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(10);
+        pdf.setTextColor(0, 0, 0);
+        pdf.text(`${pageNumber} / ${totalPages}`, pageWidth / 2, pageHeight - 10, {
+          align: 'center'
+        });
+      }
+    });
+
+    await worker.save();
 
     setTimeout(() => {
       document.body.removeChild(iframe);
